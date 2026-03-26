@@ -1,72 +1,81 @@
-# Task 3: SVC with PCA and LDA
+import time
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import StandardScaler
 
 def train_models(X_train, y_train, X_test, y_test):
-    results = {}
+
+    results = {"PCA": {}, "LDA": {}}
     best_models = {}
 
-    param_grid = {
-        'svc__kernel': ['linear', 'rbf', 'poly'],
-        'svc__C': [0.1, 1],
-        'svc__gamma': ['scale'],
-        'svc__degree': [2]
-    }
+    # Correct kernel grids
+    param_grid = [
+        {"svc__kernel": ["linear"], "svc__C": [0.1, 1, 10]},
+        {"svc__kernel": ["rbf"], "svc__C": [0.1, 1, 10], "svc__gamma": ["scale", "auto"]},
+        {"svc__kernel": ["poly"], "svc__C": [0.1, 1, 10], "svc__gamma": ["scale"], "svc__degree": [2, 3, 4]},
+    ]
 
-    # -------- PCA --------
-    pca_results = {}
-
+    # ---------------- PCA ----------------
     for n in [50, 100, 200]:
         pipe = Pipeline([
-            ('pca', PCA(n_components=n)),
-            ('svc', SVC())
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=n)),
+            ("svc", SVC())
         ])
 
+        start = time.time()
         grid = GridSearchCV(pipe, param_grid, cv=3, n_jobs=-1)
         grid.fit(X_train, y_train)
+        train_time = time.time() - start
 
-        train_acc = grid.best_score_
+        train_acc = grid.score(X_train, y_train)
         test_acc = grid.score(X_test, y_test)
 
-        pca_results[n] = (grid.best_params_, train_acc, test_acc)
+        results["PCA"][n] = {
+            "best_params": grid.best_params_,
+            "train_acc": train_acc,
+            "test_acc": test_acc,
+            "train_time": train_time
+        }
 
-        print(f"PCA {n} Done")
+        print(f"PCA {n} done")
 
-    results["PCA"] = pca_results
-
-    # -------- LDA --------
+    # ---------------- LDA ----------------
     lda_pipe = Pipeline([
-        ('lda', LDA()),
-        ('svc', SVC())
+        ("scaler", StandardScaler()),
+        ("lda", LDA()),  # reduces to 9 dims automatically
+        ("svc", SVC())
     ])
 
+    start = time.time()
     lda_grid = GridSearchCV(lda_pipe, param_grid, cv=3, n_jobs=-1)
     lda_grid.fit(X_train, y_train)
+    lda_time = time.time() - start
 
-    lda_train = lda_grid.best_score_
-    lda_test = lda_grid.score(X_test, y_test)
+    results["LDA"] = {
+        "best_params": lda_grid.best_params_,
+        "train_acc": lda_grid.score(X_train, y_train),
+        "test_acc": lda_grid.score(X_test, y_test),
+        "train_time": lda_time
+    }
 
-    results["LDA"] = (lda_grid.best_params_, lda_train, lda_test)
-
-    # -------- Extract best model PER kernel (IMPORTANT FIX) --------
-    kernels = ['linear', 'rbf', 'poly']
-
-    for kernel in kernels:
+    # ---------------- Best Models for Bagging ----------------
+    # Use best PCA (100) as required for kernel comparison
+    for kernel in ["linear", "rbf", "poly"]:
         pipe = Pipeline([
-            ('pca', PCA(n_components=100)),  # fixed PCA size for consistency
-            ('svc', SVC(kernel=kernel))
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=100)),
+            ("svc", SVC(kernel=kernel))
         ])
 
-        grid = GridSearchCV(pipe, {
-            'svc__C': [0.1, 1],
-            'svc__gamma': ['scale'],
-            'svc__degree': [2]
-        }, cv=3, n_jobs=-1)
+        kernel_grid = [p for p in param_grid if p["svc__kernel"][0] == kernel]
 
+        grid = GridSearchCV(pipe, kernel_grid, cv=3, n_jobs=-1)
         grid.fit(X_train, y_train)
+
         best_models[kernel] = grid.best_estimator_
 
     return results, best_models

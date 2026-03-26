@@ -1,39 +1,38 @@
-# Task 4: Manual Bagging (using multiple kernels)
 import numpy as np
+import time
 from sklearn.metrics import accuracy_score
+import copy
 
-def bagging_ensemble(models_dict, X_train, y_train, X_test, y_test, n_models=8):
-    models = list(models_dict.values())
+def bagging_ensemble(best_models, X_train, y_train, X_test, y_test, n_models=8):
+
     predictions = []
+    kernels = list(best_models.keys())
+
+    start = time.time()
 
     for i in range(n_models):
-        # Bootstrap sampling
-        indices = np.random.choice(len(X_train), len(X_train), replace=True)
-        X_sample = X_train[indices]
-        y_sample = y_train[indices]
+        idx = np.random.choice(len(X_train), len(X_train), replace=True)
 
-        # Rotate models (linear, rbf, poly)
-        model = models[i % len(models)]
+        X_sample = X_train[idx]
+        y_sample = y_train[idx]
 
-        # Train
+        model = copy.deepcopy(best_models[kernels[i % len(kernels)]])
         model.fit(X_sample, y_sample)
 
-        # Predict
         pred = model.predict(X_test)
         predictions.append(pred)
 
-    # Majority Voting
-    predictions = np.array(predictions)
-    final_pred = []
+    total_time = time.time() - start
 
+    predictions = np.array(predictions)
+
+    final_pred = []
     for i in range(predictions.shape[1]):
-        values, counts = np.unique(predictions[:, i], return_counts=True)
-        final_pred.append(values[np.argmax(counts)])
+        vals, counts = np.unique(predictions[:, i], return_counts=True)
+        final_pred.append(vals[np.argmax(counts)])
 
     final_pred = np.array(final_pred)
 
     acc = accuracy_score(y_test, final_pred)
-    print(f"{n_models} models trained.")
-    print("Bagging Accuracy:", acc)
 
-    return acc
+    return acc, total_time
