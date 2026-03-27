@@ -1,6 +1,7 @@
 from task_2 import *
 from task_3 import train_models
 from task_4 import bagging_ensemble
+import numpy as np
 
 
 def run_dataset(X_train, y_train, X_test, y_test, name):
