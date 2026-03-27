@@ -52,7 +52,7 @@ def run_dataset(X_train, y_train, X_test, y_test, name):
 
 
 if __name__ == "__main__":
-    SAMPLE_SIZE = None  
+    SAMPLE_SIZE = None
     
     if SAMPLE_SIZE:
         print(f"\n*** USING SUBSET OF {SAMPLE_SIZE} SAMPLES FOR FASTER TESTING ***\n")
