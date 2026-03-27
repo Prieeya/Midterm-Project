@@ -26,7 +26,7 @@ def run_dataset(X_train, y_train, X_test, y_test, name):
     avg_error = sum(results["LDA"][k]["test_error"] for k in ["linear", "rbf", "poly"]) / 3
     print(f"{'LDA':<12} {lda_dims:<6} {avg_time:<22.4f} {avg_error:<12.4f}")
 
-    # ---------------- Kernel Comparison (PCA 100) ----------------
+    # ---------------- Kernel Comparison (PCA n=100) ----------------
     print("\n--- Kernel Comparison (PCA n=100) ---")
     print(f"{'Kernel':<10} {'Best Params':<40} {'SVC Train Time (s)':<20} {'Test Error':<12}")
     print("-" * 85)
@@ -35,6 +35,17 @@ def run_dataset(X_train, y_train, X_test, y_test, name):
         r = results["kernel_comparison"][kernel]
         params_str = str(r["best_params"])
         print(f"{kernel:<10} {params_str:<40} {r['svc_train_time']:<20.4f} {r['test_error']:<12.4f}")
+
+    # ---------------- Kernel Comparison for All PCA Dimensions ----------------
+    for n in [50, 100, 200]:
+        print(f"\n--- Kernel Comparison (PCA n={n}) ---")
+        print(f"{'Kernel':<10} {'Best Params':<40} {'SVC Train Time (s)':<20} {'Test Error':<12}")
+        print("-" * 85)
+        
+        for kernel in ["linear", "rbf", "poly"]:
+            r = results["PCA"][n][kernel]
+            params_str = str(r["best_params"])
+            print(f"{kernel:<10} {params_str:<40} {r['svc_train_time']:<20.4f} {r['test_error']:<12.4f}")
 
     # ---------------- Bagging Results ----------------
     print("\n--- Bagging Ensemble (Task 4) ---")
